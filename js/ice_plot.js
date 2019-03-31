@@ -79,8 +79,8 @@
           localId.set(this, _.uniqueId('ice_plot')); }
 
         // Calculate chart properties.
-        const svg = d3.select("#svg_"+(bolThumbnail?data["feature_name"]:"main"));
-        const sidebar = d3.select("#div_"+(bolThumbnail?data["feature_name"]:"main")+"_sidebar")
+        const svg = d3.select("#svg_"+(bolThumbnail?getSafeFeatureName(data["feature_name"]):"main"));
+        const sidebar = d3.select("#div_"+(bolThumbnail? getSafeFeatureName(data["feature_name"]):"main")+"_sidebar")
         const props = getProps(svg);
         const scales = getScales(data, props);
         const axes = getAxes(scales);
@@ -133,10 +133,12 @@
     function getScales(data, props) {
 
       const xDomain = d3.extent(data["x_values"]);
-      const yDomain = seriesExtent(data["clusters"].map(d => d.line), 
+      curves_for_y_domain = data["clusters"].map(d => d.line);
+      curves_for_y_domain.push(data["pdp_line"]);
+      const yDomain = seriesExtent(curves_for_y_domain, 
         d=>d);  
-      const lineWidthDomain = d3.extent(data["clusters"].map(
-        d => d.cluster_size));             
+      const lineWidthDomain = [0,d3.max(data["clusters"].map(
+        d => d.cluster_size))];             
       const xRange = [0, props.chartWidth];
       const yRange = [props.chartHeight, 0];
       const lineWidthRange = [1,5];
@@ -192,21 +194,27 @@
           .attr('transform', d =>
             `translate(${props.width-40}, ${30})`    
           );
-        closeButtonGrp.append("rect")
-          .attr("height", 25)
-          .attr("width", 20)
-          .attr("fill", "red")
-          .attr("opacity", .3)
-          .attr("cursor", "pointer")
-          .on("click", _.partial(minimize, svg));
+          closeButtonGrp.append("button")
+            .attr("class","btn btn-primary")
+            .attr("height", 25)
+            .attr("width", 20)
+            .attr("cursor", "pointer")
+            .on("click", _.partial(minimize, svg));
+        // closeButtonGrp.append("rect")
+        //   .attr("height", 25)
+        //   .attr("width", 20)
+        //   .attr("fill", "red")
+        //   .attr("opacity", .3)
+        //   .attr("cursor", "pointer")
+        //   .on("click", _.partial(minimize, svg));
 
-        closeButtonGrp.append("text")
-          .attr("y", 20)
-          .attr("x", 5)
-          .attr("font-size", 20)
-          .text("X")
-          .attr("cursor", "pointer")
-          .on("click", _.partial(minimize, svg));
+        // closeButtonGrp.append("text")
+        //   .attr("y", 20)
+        //   .attr("x", 5)
+        //   .attr("font-size", 20)
+        //   .text("X")
+        //   .attr("cursor", "pointer")
+        //   .on("click", _.partial(minimize, svg));
       }
     }
 
@@ -304,7 +312,7 @@
 
       svg.append("text")
         .attr("class", "x label")
-        //.attr("text-anchor", "end")
+        .attr("text-anchor", "middle")
         .attr("x", props.width/2)
         .attr("y", props.height -10)
         .text(data["feature_name"]);
@@ -404,11 +412,12 @@
           .attr('d', d => line.get(svg.node())(d.line))
           .attr("show_member_curves", false)
           .on("click", (d,i)=> {
-              console.log("click");
-              d3.event.stopPropagation();
-              this.show_member_curves = !this.show_member_curves;
-              show_member_curves(line, svg, container, d,i, 
-                this.show_member_curves);
+              if(!bolThumbnail) {
+                d3.event.stopPropagation();
+                this.show_member_curves = !this.show_member_curves;
+                show_member_curves(line, svg, container, d,i, 
+                  this.show_member_curves);
+              }
           });
     }
 
@@ -571,12 +580,17 @@
 
     function maximize(svg, data) {
       console.log("maximize");
-      dispatch.call("maximize", svg.node(), data["feature_name"]) ;    
+      dispatch.call("maximize", svg.node(), data["feature_name"]);    
     }
 
     function minimize(svg) {
       console.log("minimize");
-      dispatch.call("minimize", svg.node()) ;    
+      dispatch.call("minimize", svg.node());  
+    }
+
+    function getSafeFeatureName(feature) {
+
+      return _.replace(feature,new RegExp(" ","g"),"_");
     }
 
 

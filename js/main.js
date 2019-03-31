@@ -10,7 +10,7 @@
 
   mainProps = {
     height : 700,
-    width : 850,
+    width : 1200,
     sidebar_width : 150,
     x_margin : 50,
     y_margin : 50
@@ -43,6 +43,11 @@
     links.forEach(drawLink);
   }
 
+  function getSafeFeatureName(feature) {
+
+    return _.replace(feature,new RegExp(" ","g"),"_");
+  }
+
   function showFeature(feature, thumbnail, feature_num) {
 
     if(thumbnail) {
@@ -73,13 +78,13 @@
     //add new one
     var div = d3.select("#vis")
       .append("div")
-        .attr("id", "div_"+name)
+        .attr("id", "div_"+getSafeFeatureName(name))
         .attr("height", props.height)
         .attr("width", props.width + thumbnail?0:props.sidebar_width);
 
     var svg = div
       .append("svg")
-        .attr("id", "svg_"+name)
+        .attr("id", "svg_"+getSafeFeatureName(name))
         .attr("class", "svg-feature")
         .attr("height", props.height)
         .attr("width", props.width);
@@ -87,16 +92,16 @@
     if(!thumbnail) {
       var sidebar = div
         .append("div")
-          .attr("id", "div_"+name+"_sidebar")
+          .attr("id", "div_"+getSafeFeatureName(name)+"_sidebar")
           .attr("height", props.height)
           .attr("width", props.sidebar_width);
     }
 
     if(!thumbnail) {
-      $("#svg_"+name).css(svg_css);
-      $("#div_"+name+"_sidebar").css(sidebar_css);
+      $("#svg_"+getSafeFeatureName(name)).css(svg_css);
+      $("#div_"+getSafeFeatureName(name)+"_sidebar").css(sidebar_css);
     } else {
-      d3.select("#vis").select("#svg_"+name)
+      d3.select("#vis").select("#svg_"+getSafeFeatureName(name))
         .style("position", "absolute")
         .style("left",
           featureXScale(loaded_data["features"][feature]["cluster_deviation"]))
@@ -270,7 +275,7 @@
 
       node._groups[0].forEach(d=>{
         
-        d3.select("#vis").select("#svg_" + d.getAttribute("id"))
+        d3.select("#vis").select("#svg_" + getSafeFeatureName(d.getAttribute("id")))
             .style("left", d.getAttribute("cx"))
             .style("top", d.getAttribute("cy"))
             .attr("visibility", bolShow?"visible":"hidden");        
