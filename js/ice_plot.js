@@ -87,7 +87,16 @@
 
         scaledHistogramProps = {}
         for(var key in histogramProps) {
-          scaledHistogramProps[key]= histogramProps[key]/data["clusters"].length;
+
+          let min_value = 10000;
+          if(key ==  "outer_width" || key == "outer_height") {
+            min_value = 200;
+          } else if(["left", "top", "bottom", "right"]
+            .indexOf(key) != -1) {
+            min_value = 30;
+          }
+
+          scaledHistogramProps[key]= d3.min([min_value,histogramProps[key]/data["clusters"].length]);
         }        
         scaledHistogramProps["width"] = scaledHistogramProps["outer_width"]
         -(scaledHistogramProps["left"]+scaledHistogramProps["right"]);
@@ -109,7 +118,8 @@
         renderClusters(localSVG.get(this), props, scales, data);
 
         // Render the sidebar
-        renderSidebar(localSidebar.get(this), data, 
+        renderSidebar(localSVG.get(this),
+          localSidebar.get(this), data, scales, 
           distribution_data, scaledHistogramProps);
       });
     }
@@ -132,22 +142,36 @@
 
     function getScales(data, props) {
 
-      const xDomain = d3.extent(data["x_values"]);
+      const xDomain = data["data_type"]=="numeric"
+        ?d3.extent(data["x_values"])
+        :["pdp",...data["clusters"].map((d,i)=> i)];
       curves_for_y_domain = data["clusters"].map(d => d.line);
       curves_for_y_domain.push(data["pdp_line"]);
+
       const yDomain = seriesExtent(curves_for_y_domain, 
         d=>d);  
+
       const lineWidthDomain = [0,d3.max(data["clusters"].map(
-        d => d.cluster_size))];             
+        d => d.cluster_size))];  
+
       const xRange = [0, props.chartWidth];
       const yRange = [props.chartHeight, 0];
-      const lineWidthRange = [1,5];
+      const lineWidthRange = [2,5];
 
+      paddingScale = d3.scaleLinear().domain([0,5]).range([.9,.1])
+      const bar_padding = paddingScale(data["clusters"].length)
+
+      const colorDomain = _.range(data["clusters"].length*2);
+      const colorRange = d3.schemePaired;
       return {
-        x: d3.scaleLinear().domain(xDomain).range(xRange),
+        x: data["data_type"]=="numeric"
+          ?d3.scaleLinear().domain(xDomain).range(xRange)
+          :d3.scaleBand().domain(xDomain).range(xRange)
+            .padding(bar_padding).align(0.5),
         y: d3.scaleLinear().domain(yDomain).range(yRange),
         lineWidth: d3.scaleLinear().domain(lineWidthDomain)
-          .range(lineWidthRange)
+          .range(lineWidthRange),
+        color: d3.scaleOrdinal().domain(colorDomain).range(colorRange)
       };
     }
 
@@ -161,10 +185,16 @@
         axes.push({ cls:'right', axis: d3.axisRight(scales.y) });
       }
       if (axisProps.bottom) {
-        axes.push({ cls:'bottom', axis: d3.axisBottom(scales.x) });
+        axes.push({ cls:'bottom',
+          axis: d3.axisBottom(scales.x)
+            .ticks(bolThumbnail?5:10)
+        });
       }
       if (axisProps.left) {
-        axes.push({ cls:'left', axis: d3.axisLeft(scales.y) });
+        axes.push({ cls:'left',
+          axis: d3.axisLeft(scales.y) 
+            .ticks(bolThumbnail?7:10)
+        });
       }
       return axes;
     }
@@ -194,27 +224,21 @@
           .attr('transform', d =>
             `translate(${props.width-40}, ${30})`    
           );
-          closeButtonGrp.append("button")
-            .attr("class","btn btn-primary")
-            .attr("height", 25)
-            .attr("width", 20)
-            .attr("cursor", "pointer")
-            .on("click", _.partial(minimize, svg));
-        // closeButtonGrp.append("rect")
-        //   .attr("height", 25)
-        //   .attr("width", 20)
-        //   .attr("fill", "red")
-        //   .attr("opacity", .3)
-        //   .attr("cursor", "pointer")
-        //   .on("click", _.partial(minimize, svg));
+        closeButtonGrp.append("rect")
+          .attr("height", 25)
+          .attr("width", 20)
+          .attr("fill", "red")
+          .attr("opacity", .3)
+          .attr("cursor", "pointer")
+          .on("click", _.partial(minimize, svg));
 
-        // closeButtonGrp.append("text")
-        //   .attr("y", 20)
-        //   .attr("x", 5)
-        //   .attr("font-size", 20)
-        //   .text("X")
-        //   .attr("cursor", "pointer")
-        //   .on("click", _.partial(minimize, svg));
+        closeButtonGrp.append("text")
+          .attr("y", 20)
+          .attr("x", 5)
+          .attr("font-size", 20)
+          .text("X")
+          .attr("cursor", "pointer")
+          .on("click", _.partial(minimize, svg));
       }
     }
 
@@ -340,27 +364,49 @@
         x: xScale,
         y: yScale
       } = scales;
-
-      let line = d3.line()
-        .x((d, i) => xScale(data["x_values"][i]))
-        .y((d, i) => yScale(d))
-        .curve(curve);
       const container = svg.select('.series-content');
-      let series = container
-        .selectAll('.pdp_curve')
-        .data([data["pdp_line"]]);
-      series.exit().remove();
 
-      series = series
-        .enter()
-        .append('path')
-          .attr('class', 'pdp_curve')
-          .attr('fill', 'none')
-          .attr('stroke', "black")
-          .attr('stroke-width', 5)
-          .attr('opacity', 1)
-        .merge(series)
-          .attr('d', d => line(d));
+      if(data["data_type"] == "numeric") {
+
+        let line = d3.line()
+          .x((d, i) => xScale(data["x_values"][i]))
+          .y((d, i) => yScale(d))
+          .curve(curve);
+        let series = container
+          .selectAll('.pdp_curve')
+          .data([data["pdp_line"]]);
+        series.exit().remove();
+
+        series = series
+          .enter()
+          .append('path')
+            .attr('class', 'pdp_curve')
+            .attr('fill', 'none')
+            .attr('stroke', "black")
+            .attr('stroke-width', 5)
+            .attr('opacity', 1)
+          .merge(series)
+            .attr('d', d => line(d));
+      } else if(data["data_type"] == "categorical") {
+
+        bar_data = [data["pdp_line"].slice(-1)]
+
+        let series = container
+          .selectAll('.pdp_bar')
+          .data(bar_data);
+        series.exit().remove();
+
+        series = series
+          .enter()
+          .append('rect')
+            .attr('class', 'pdp_bar')
+            .attr('fill', 'black')
+            .attr('width', xScale.bandwidth())
+          .merge(series)
+            .attr("y", d=> Math.min(yScale(0), yScale(d)))
+            .attr("height", d=> Math.abs(yScale(d) - yScale(0)))
+            .attr('x', xScale("pdp"));        
+      }
     }
 
 
@@ -369,14 +415,10 @@
       const {
         x: xScale,
         y: yScale,
-        lineWidth: widthScale
+        lineWidth: widthScale,
+        color: colorScale
       } = localScales.get(svg.node());
 
-      const line = d3.local()
-      line.set(svg.node(), d3.line()
-        .x((d, i) => xScale(data["x_values"][i]))
-        .y((d, i) => yScale(d))
-        .curve(curve));
       const container = svg.select('.series-content');
       let cluster_gs = container
         .selectAll('.cluster')
@@ -387,46 +429,73 @@
         .append("g")
         //.merge(cluster_gs)
           .attr("class", "cluster")
-          .attr("id", (d,i) => "cluster_"+i);          
+          .attr("id", (d,i) => "cluster_"+i);    
 
-      let cluster_curves = cluster_gs
-        .append('path')
-        .merge(container.selectAll(".cluster_curve"))
-          .attr("class", "cluster_curve")
-          .attr('fill', 'none')
-          .attr('stroke', "blue")
-          .attr("stroke-width", d => widthScale(d.cluster_size))
-          .attr('opacity', 0.5)
-          .attr('d', d => line.get(svg.node())(d.line));
+      if(data["data_type"] == "numeric") {      
 
-      //to increase click target size
-      let invisible_cluster_curves = cluster_gs
-        .append('path')
-        .merge(container.selectAll(".cluster_curve"))
-          .attr("class", "cluster_curve")
-          .attr('fill', 'none')
-          .attr('stroke', "blue")
-          .attr("stroke-width", 15)
-          .attr("opacity", 0)
-          .attr("cursor", "pointer")
-          .attr('d', d => line.get(svg.node())(d.line))
-          .attr("show_member_curves", false)
-          .on("click", (d,i)=> {
-              if(!bolThumbnail) {
-                d3.event.stopPropagation();
-                this.show_member_curves = !this.show_member_curves;
-                show_member_curves(line, svg, container, d,i, 
-                  this.show_member_curves);
-              }
-          });
+        const line = d3.local()
+        line.set(svg.node(), d3.line()
+          .x((d, i) => xScale(data["x_values"][i]))
+          .y((d, i) => yScale(d))
+          .curve(curve));                
+
+        let cluster_curves = cluster_gs
+          .append('path')
+          .merge(container.selectAll(".cluster_curve"))
+            .attr("class", "cluster_curve")
+            .attr('fill', 'none')
+            .attr('stroke', (d,i)=> colorScale(2*i))
+            .attr("stroke-width", d => widthScale(d.cluster_size))
+            .attr('opacity', 0.5)
+            .attr('d', d => line.get(svg.node())(d.line));
+
+        //to increase click target size
+        let invisible_cluster_curves = cluster_gs
+          .append('path')
+          .merge(container.selectAll(".cluster_curve"))
+            .attr("class", "cluster_curve")
+            .attr('fill', 'none')
+            .attr('stroke', "blue")
+            .attr("stroke-width", 15)
+            .attr("opacity", 0)
+            .attr("cursor", "pointer")
+            .attr('d', d => line.get(svg.node())(d.line))
+            .attr("show_member_curves", false)
+            .on("click", (d,i)=> {
+                if(!bolThumbnail) {
+                  d3.event.stopPropagation();
+                  this.show_member_curves = !this.show_member_curves;
+                  show_member_curves(line, svg, container, d,i, 
+                    this.show_member_curves);
+                }
+            });
+      } else if(data["data_type"] == "categorical") {
+
+        let cluster_bars = cluster_gs
+          .append('rect')
+            .attr('class', 'cluster_bar')
+            .attr('fill', (d,i)=> colorScale(2*i))
+            .attr('width', xScale.bandwidth())
+            .attr('x', (d,i) => xScale(i)) //add 1 for PDP  
+            .attr("y", d=> Math.min(yScale(0), yScale(d["line"].slice(-1))))
+            .attr("height", d=> Math.abs(yScale(d["line"].slice(-1)) - yScale(0)))           
+      }
     }
 
-    function renderSidebar(div, data, distribution_data, scaledHistogramProps){     
+    function renderSidebar(svg, div, data, scales,
+      distribution_data, scaledHistogramProps){   
+
+      const {
+        color: colorScale
+      } = localScales.get(svg.node());        
 
       //adapted from http://bl.ocks.org/jfreels/6734025
       //columns = Object.keys(distribution_data);
       columns = [...new Set(data["clusters"].map(d=> d.split_feature))]; 
       num_clusters = data["clusters"].length;
+      data["clusters"].forEach((d,i) => {
+        d.cluster_key = i;
+      })
       sorted_clusters = data["clusters"].sort((a,b) => {
         return b["line"][b["line"].length-1] - a["line"][a["line"].length-1];})
       var table = div.append("table")
@@ -496,14 +565,18 @@
                 .attr("height", e=> scaledHistogramProps.height - y_scale(e.y))
                 .attr("fill", e=> {
                   if(d["row"]["split_direction"] == ">") {
-                    return e.x>d["row"]["split_val"]?"steelblue":"blue";
+                    return e.x>d["row"]["split_val"]?
+                    colorScale(d["row"]["cluster_key"]*2+1):
+                    colorScale(d["row"]["cluster_key"]*2);
                   } else {
-                    return e.x<=d["row"]["split_val"]?"steelblue":"blue";
+                    return e.x<=d["row"]["split_val"]?
+                    colorScale(d["row"]["cluster_key"]*2+1):
+                    colorScale(d["row"]["cluster_key"]*2);
                   }
                 });
 
-            if(d["column"].length > 10) {
-              x_axis = d3.axisBottom(x_scale).ticks(10);
+            if(d["column"].length > 5) {
+              x_axis = d3.axisBottom(x_scale).ticks(5);
             } else {
               x_axis = d3.axisBottom(x_scale).tickValues(
                     d["column"].map(e=> e.x));

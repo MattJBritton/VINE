@@ -98,18 +98,58 @@ textarea {
    ========================================================================== */
 
 
+#header-title {
+    width: 70px;
+    cursor: pointer;
+    color: #ffffff;
+    font-size: 22px;
+    font-variant: small-caps;
+}
 
+#header {
+    font-size: 18px;
+    font-weight: 200;
+    background: #1A237E;
+} 
 
+.header-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-left: 20px;
+    padding-right: 20px;
+    color: #ffffff;
+}
 
+.smalltext-header {
+    color: #dddddd;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+}
 
+#header-title-wrapper {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
 
+.header-value {
+    height: 20px !important;
+}
 
+.wrapper {
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+}
 
-
-
-
-
-
+.svg-border {
+    border: 3px;
+    fill: #e8e5e5;
+}
 
 
 
@@ -289,6 +329,6 @@ textarea {
         border: 1px solid black;
         border-collapse: collapse;
         border-spacing: 20px;
-    }    
+    }       
 
 }

@@ -4,9 +4,11 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
-  <title></title>
+  <title>VINE</title>
   <meta name="description" content="">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="shortcut icon" type="image/png" href="/favicon.png"/>
 
   <link rel="stylesheet" href="css/normalize.css">
   <link rel="stylesheet" href="css/bootstrap.min.css">
@@ -16,7 +18,29 @@
 <body>
 
   <!-- Add your site or application content here -->
-  <div id="vis" width="1200" height="1100"></div>
+  <div id="header" width="1200" height="150" class="container-fluid">
+      <div class="row">
+        <div id="header-title-wrapper col-sm-3">
+          <div style="display: flex">
+            <div id="header-title" class="container-fluid">VINE</div> 
+          </div> 
+        </div>
+        <div class="header-content col-sm-2">
+          <span id="dataset-name" class="smalltext-header">dataset</span>
+          <div id="dataset-value" class="header-value">Bike Sharing</div>
+        </div> 
+        <div class="header-content col-sm-2">
+          <span id="dataset-name" class="smalltext-header">Features</span>
+          <div id="dataset-value" class="header-value">11</div>
+        </div>  
+        <div class="header-content col-sm-2">
+          <span id="dataset-name" class="smalltext-header">Instances</span>
+          <div id="dataset-value" class="header-value">17,379</div>
+        </div>                         
+    </div>
+  </div>
+  <div id="vis" width="1200" height="700" class="container-fluid"></div>
+  <div id="data" width="1200" height="300" class="container-fluid"></div>
 
   <!-- Modernizr -->
   <script src="js/vendor/modernizr-3.6.0.min.js"></script>

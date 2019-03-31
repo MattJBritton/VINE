@@ -1,19 +1,21 @@
 (function(global, ice_plot, d3, _) {
 
   thumbProps = {
-    height : 160,
-    width : 185,
+    chartHeight : 160,
+    chartWidth : 185,
     x_margin : 20,
     y_margin : 20,
     svgs_per_row : 3
   }
 
   mainProps = {
-    height : 700,
-    width : 1200,
-    sidebar_width : 150,
-    x_margin : 50,
-    y_margin : 50
+    height : 900,
+    width : 1100,
+    chartHeight: 600,
+    chartWidth: 700,
+    sidebar_width : 75,
+    x_margin : 30,
+    y_margin : 30
   }
 
   loaded_data = [];
@@ -21,6 +23,7 @@
   links = [];
   featureXScale = d3.scaleLinear();
   featureYScale = d3.scaleLinear();
+  forceLayoutComplete = false;
 
   function drawNode(n) {
 
@@ -64,13 +67,13 @@
       props = mainProps;
       name = 'main';
       svg_css = {
-        top: 0, 
+        top: 50, 
         left: 0, 
         position:'absolute'
       };
       sidebar_css = {
-        top: 0, 
-        left: mainProps.width, 
+        top: 50, 
+        left: mainProps.chartWidth, 
         position:'absolute'
       };     
     }
@@ -79,21 +82,30 @@
     var div = d3.select("#vis")
       .append("div")
         .attr("id", "div_"+getSafeFeatureName(name))
-        .attr("height", props.height)
-        .attr("width", props.width + thumbnail?0:props.sidebar_width);
+        .attr("height", props.chartHeight)
+        .attr("width", props.chartWidth + thumbnail?0:props.sidebar_width);
 
     var svg = div
       .append("svg")
         .attr("id", "svg_"+getSafeFeatureName(name))
         .attr("class", "svg-feature")
-        .attr("height", props.height)
-        .attr("width", props.width);
+        .attr("height", props.chartHeight)
+        .attr("width", props.chartWidth);
+
+    svg.append("rect")
+      .attr("class","svg-border")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("rx", 20)
+      .attr("ry", 20)
+      .attr("height", props.chartHeight)
+      .attr("width", props.chartWidth)
 
     if(!thumbnail) {
       var sidebar = div
         .append("div")
           .attr("id", "div_"+getSafeFeatureName(name)+"_sidebar")
-          .attr("height", props.height)
+          .attr("height", props.chartHeight)
           .attr("width", props.sidebar_width);
     }
 
@@ -181,13 +193,13 @@
       .tickFormat((d,i) => {
         switch(i){
           case 0: 
-            return "positive";
+            return "high";
             break;
           case 1:
-            return "low";
+            return "moderate";
             break;
           case 2:
-            return "negative";
+            return "low";
             break;
         }
       });
@@ -213,6 +225,10 @@
   }
 
   function build_force_layout(){
+
+    if(forceLayoutComplete) {
+      return;
+    }
     
     //adapted from http://bl.ocks.org/sathomas/11550728
     //force layout
@@ -223,20 +239,20 @@
         .attr("width", mainProps.width);
 
     var simulation = d3.forceSimulation()
-    //.alphaDecay(0.05)
+    .alphaDecay(0.01)
     /*.force("link", 
       d3.forceLink()
         .id(d => d.name)
         .distance(d => 100*Math.log(d.value)))*/
     .force("charge", d3.forceManyBody()
-        .strength(600)
+        .strength(500)
         .distanceMin(2000)
         .distanceMax(1000000)
     )
     .force("center", d3.forceCenter(mainProps.width / 2, 
                                     mainProps.height / 2))
     .force('collision', d3.forceCollide()
-        .radius(90));
+        .radius(100));
 
     /*
     var link = svg.append("g")
@@ -265,7 +281,11 @@
     simulation
       .nodes(nodes)
       .on('tick', d=>{return tickedSVG(true);})
-      .on('end', d=>{return tickedSVG(true);});       
+      .on('end', d=>{
+        console.log("force layout complete");
+        //forceLayoutComplete = true;
+        return tickedSVG(true);
+      });       
 
     /*simulation
     .force("link")
