@@ -1,6 +1,6 @@
 # VINE: Visualizing Statistical Interactions in Black Box Models
 
-* For detailed background, see paper at URL_TO_ADD
+* For detailed background, see paper on [https://arxiv.org/abs/1904.00561](arxiv.org)
 * Run `main.py` to generate the file that the visualization consumes
     * `main.py` takes five arguments:
         * `dataset_name`: currently, choose from "bike", "diabetes", or "boston" (required)
